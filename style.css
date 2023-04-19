@@ -1,0 +1,16 @@
+@import url('https://fonts.cdnfonts.com/css/super-grotesk-offc-pro?styles=17844');
+
+body{
+    font-family: 'Super Grotesk Offc Pro', sans-serif;
+    color: #686968;
+                                                
+}
+
+.quarto-title-block .quarto-title-banner {
+    background-image: url(King_logo_svg.png);
+    background-size: 300px;
+    background-position: right;
+    background-repeat: no-repeat;
+    padding-left: 10px;
+    background-origin: content-box;
+  }

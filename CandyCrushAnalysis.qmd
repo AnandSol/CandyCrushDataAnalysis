@@ -1,0 +1,187 @@
+---
+format: 
+  html:
+      toc: true
+      css: style.css
+      embed-resources: true
+---
+
+```{r, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+```
+
+```{r, include = FALSE}
+
+library(tidyverse)
+library(ggalt)
+library(ggimage)
+library(magick)
+library(ggtext)
+library(extrafont)
+library(showtext)
+library(ggiraph)
+
+font_add(family = "superGrotesk", regular = "supergroteska-rg.ttf")
+showtext_auto()
+
+data <- read_csv("candy_crush.csv")
+
+noPlayers <- 
+  data %>% 
+    distinct(player_id) %>% 
+    nrow()
+```
+
+![](King_logo.svg.png){width="91"}
+
+# **Candy Crush Game Analysis**
+
+**Author**
+
+Anand Solanki - [anand.solanki95\@hotmail.com](anand.solanki95@hotmail.com)
+
+## **Introduction**
+
+Using the publicly available dataset from Kaggle, we investigated Candy Crush players (`r noPlayers`) and their experience of a set of 15 levels.
+
+For game designers assessing the difficulty of levels is important feedback as, designers have to maintain a balance between making a level too easy or challenging. This simple analysis sought to test the assumption that, the more difficult a level, the more attempts required to pass the level. Therefore, the more difficult a level the lower the probability it is to pass a level. In this analysis we set the criteria of any level below a 10% probability of passing on their attempt is considered a hard level.
+
+The method we used to test this assumption is known as the Bernoulli process. As the outcome is either a win - loss scenario, this calculation done by taking the sum of wins for each level and dividing it by the sum of the number of attempts made.
+
+::: {.callout-note collapse="true"}
+## Bernoulli Process
+
+The formula that is used to model the probability of a win is expressed mathematically as follows:
+
+$$ Pwin = \frac{\sum wins} {\sum attempts} $$
+:::
+
+<br>
+
+## **Analysis**
+
+#### **Candy Crush Level Difficulty**
+
+An interactive graph charting the difficulty of levels, with number of [**wins**]{style="color:#00b67d;"} plotted against number of [**attempts**]{style="color:#ffc000;"}. Levels with percentages highlighted in [**red**]{style="color:#D3151C;"} indicate a \< 10% probability of players solving it on their first try.
+
+```{r, echo = FALSE, fig.dim= c(8,8)}
+
+
+difficulty <- 
+    data  %>% 
+        group_by(level) %>% 
+        summarise(wins = sum(num_success),
+                  attempts = sum(num_attempts)) %>% 
+        mutate(p_win = wins/attempts) %>% 
+        mutate(red_condition = case_when(p_win < .1 ~ "#D3151C",
+                                         TRUE ~ "#00b67d")) %>% 
+        mutate(level = as_factor(level),
+               p_win_lab = glue::glue("{scales::percent(p_win, 1)}"))
+
+plotDat <- 
+  difficulty %>% 
+    select(-p_win) %>% 
+    gather(key = type, value = value, -level, -p_win_lab, -red_condition) %>% 
+    mutate(level = as_factor(level)) %>% 
+    mutate(image = case_when(type == "wins" ~ "https://careers.king.com/images/bullet-1.svg",
+                             TRUE ~ "https://careers.king.com/images/bullet-2.svg"),
+           colour = case_when(type == "wins" ~ "#F28666",
+                              TRUE ~ "#ffc000")) %>% 
+    left_join(difficulty %>% select(level, wins, attempts), by = "level")
+
+
+gg_plotData <-
+plotDat %>% 
+  ggplot(aes(y = level, x = value, color = type)) +
+    geom_line(
+      alpha = 0.3,
+      color = "#686968",
+      linetype = "dashed",
+      size = 1.5
+    ) +
+    geom_point_interactive(
+      shape = 21,
+      fill = "white", 
+      size = 4,
+      stroke = 3,
+      aes(
+        tooltip = value,
+        data_id = value
+      )
+    ) +
+    geom_text(
+      aes(
+        x = 1157,
+        y = 15,
+        label = "Wins",
+        vjust = -1,
+        hjust = .5, 
+        family = "superGrotesk"
+       ),
+      size = 8,
+      color = "#00b67d", 
+      show.legend = FALSE
+    ) +
+    geom_text(
+      aes(
+        x = 30374,
+        y = 15,
+        label = "Attempts",
+        vjust = -1,
+        hjust = .8,
+        family = "superGrotesk"
+       ),
+      size = 8,
+      color = "#ffc000",
+      show.legend = FALSE
+    ) +
+    geom_text(
+      aes(
+        x = 20000,
+        y = level, 
+        label = p_win_lab,
+        family = "superGrotesk"
+       ),
+      size = 5,
+      color = plotDat$red_condition
+    ) +
+    # geom_image(aes(image = image), size = 0.015, by = "height", asp = 1) +
+    scale_color_manual(
+      values = c("#ffc000",
+                 "#16DBAA")
+    ) +
+    scale_y_discrete(expand = expansion(add = 2)) +
+    labs(
+      y = "Levels <img src='bullet-2.png' width='18'></img>"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          axis.title = element_markdown(color = "#686968"),
+          axis.text.y = element_markdown(color = "#686968"),
+          text = element_text(family = "superGrotesk",
+                              size = 20),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.title = element_textbox_simple(color = "#686968"),
+          plot.subtitle = element_textbox_simple(color = "#686968"),
+          axis.title.y = element_markdown(margin = margin(r = 10))
+    )
+
+girafe(ggobj = gg_plotData)
+
+    
+```
+
+## **Actionable Insights & Takeaway**
+
+As a game designer, the need to strike a balance between designing a level that challenges the user enough to stay engaged is important for player retention. Out of the 15 levels, [**5**]{style="color:#D3151C;"} had a below [**10%**]{style="color:#D3151C;"} probability of being completed on a first attempt. Good level balancing is further demonstrated by a calculation of the probability of a player completing all 15 levels without losing once: `r format(as.numeric(prod(difficulty$p_win)) * 100, scientific = FALSE)`%.
+
+**Limitation of analysis**
+
+-   This was a simple probability model of the levels which did not take in to account other factors that would contribute to a players difficulty of a level.
+-   The dataset only involved a subsection of the player base during a short 6 day period.
+-   Future analyses should look to conduct robust statistical analysis modelling these confounding variables. This would provide richer insight in to the behaviour of the players.
