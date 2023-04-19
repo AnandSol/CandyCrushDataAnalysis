@@ -1,4 +1,4 @@
-# Candy Crush Data Analysis
+# Candy Crush Data Analysis 🍭🧁🍬
 
 **Author**
 
